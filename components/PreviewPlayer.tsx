@@ -17,48 +17,82 @@ export function PreviewPlayer({ clips, selectedClip }: PreviewPlayerProps) {
 
   const doneClips = clips.filter((c) => c.status === "done" && c.video_url);
 
-  // When a clip is selected, preview just that clip
+  // Refs to avoid stale closures in event handlers
+  const queueIndexRef = useRef(queueIndex);
+  const doneClipsRef = useRef(doneClips);
+  // Whether we should auto-play the next loaded clip
+  const shouldAutoPlayRef = useRef(false);
+  // Ignore pause events fired by .load()
+  const loadingRef = useRef(false);
+
+  useEffect(() => { queueIndexRef.current = queueIndex; }, [queueIndex]);
+  useEffect(() => { doneClipsRef.current = doneClips; });
+
+  // When a clip is selected from timeline, jump to it
   useEffect(() => {
     if (selectedClip?.status === "done" && selectedClip.video_url) {
       setActiveClip(selectedClip);
-      setQueueIndex(doneClips.findIndex((c) => c.id === selectedClip.id));
+      const idx = doneClipsRef.current.findIndex((c) => c.id === selectedClip.id);
+      setQueueIndex(idx >= 0 ? idx : 0);
+      // If already playing, keep playing the new clip
+      shouldAutoPlayRef.current = playing;
     }
   }, [selectedClip]);
 
   // Auto-advance to next clip when current ends
   const handleEnded = () => {
-    const nextIndex = queueIndex + 1;
-    if (nextIndex < doneClips.length) {
+    const nextIndex = queueIndexRef.current + 1;
+    const dc = doneClipsRef.current;
+    // Always auto-play the next clip (user hasn't paused)
+    shouldAutoPlayRef.current = true;
+    if (nextIndex < dc.length) {
       setQueueIndex(nextIndex);
-      setActiveClip(doneClips[nextIndex]);
+      setActiveClip(dc[nextIndex]!);
     } else {
-      setPlaying(false);
+      // Loop back to beginning
+      setQueueIndex(0);
+      setActiveClip(dc[0]!);
     }
   };
 
+  // When activeClip changes, load and play
   useEffect(() => {
-    if (activeClip && videoRef.current) {
-      videoRef.current.load();
-      if (playing) videoRef.current.play();
-    }
+    const video = videoRef.current;
+    if (!activeClip || !video) return;
+
+    loadingRef.current = true;
+    video.load();
+
+    const onCanPlay = () => {
+      loadingRef.current = false;
+      if (shouldAutoPlayRef.current) {
+        video.play().catch(() => {});
+      }
+    };
+    video.addEventListener("canplay", onCanPlay, { once: true });
+    return () => video.removeEventListener("canplay", onCanPlay);
   }, [activeClip]);
 
   const togglePlay = () => {
-    if (!videoRef.current) return;
+    const video = videoRef.current;
+    if (!video) return;
     if (playing) {
-      videoRef.current.pause();
+      shouldAutoPlayRef.current = false;
+      video.pause();
     } else {
+      shouldAutoPlayRef.current = true;
       if (!activeClip && doneClips.length > 0) {
-        setActiveClip(doneClips[0]);
+        setActiveClip(doneClips[0]!);
         setQueueIndex(0);
+        // canplay handler will start playback
+        return;
       }
-      videoRef.current.play();
+      video.play().catch(() => {});
     }
-    setPlaying((v) => !v);
   };
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+    <div className="bg-zinc-900 rounded-lg overflow-hidden w-full">
       {/* Video area */}
       <div className="relative bg-black aspect-video flex items-center justify-center">
         {activeClip?.video_url ? (
@@ -69,7 +103,7 @@ export function PreviewPlayer({ clips, selectedClip }: PreviewPlayerProps) {
             muted={muted}
             onEnded={handleEnded}
             onPlay={() => setPlaying(true)}
-            onPause={() => setPlaying(false)}
+            onPause={() => { if (!loadingRef.current) setPlaying(false); }}
           />
         ) : (
           <div className="text-zinc-600 text-sm">

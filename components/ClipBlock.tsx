@@ -77,10 +77,11 @@ export function ClipBlock({
         {/* Thumbnail / placeholder */}
         {clip.video_url ? (
           <video
-            src={clip.video_url}
+            src={`${clip.video_url}#t=0.5`}
             className="w-full h-16 object-cover bg-black"
             muted
             preload="metadata"
+            playsInline
           />
         ) : (
           <div className="w-full h-16 bg-zinc-800 flex items-center justify-center">
