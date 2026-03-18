@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Clip, ClipStatus, ExportStatus, Project } from "./types";
+import type { Character, Clip, ClipStatus, ExportStatus, Project } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -47,6 +47,41 @@ export async function getProjectClips(projectId: string): Promise<{ clips: Clip[
 
 export async function deleteProject(id: string): Promise<void> {
   await http.delete(`/projects/${id}`);
+}
+
+export async function planFromScript(
+  projectId: string,
+  scriptText: string
+): Promise<{ clips: Clip[] }> {
+  const fd = new FormData();
+  fd.append("script", scriptText);
+  const res = await http.post(`/projects/${projectId}/script`, fd);
+  return res.data;
+}
+
+// ── Characters ───────────────────────────────────────────────────────────────
+
+export async function createCharacter(
+  projectId: string,
+  name: string,
+  description: string,
+  imageFiles: File[] = []
+): Promise<Character> {
+  const fd = new FormData();
+  fd.append("name", name);
+  fd.append("description", description);
+  imageFiles.forEach((f) => fd.append("images", f));
+  const res = await http.post<Character>(`/projects/${projectId}/characters`, fd);
+  return res.data;
+}
+
+export async function listCharacters(projectId: string): Promise<{ characters: Character[] }> {
+  const res = await http.get(`/projects/${projectId}/characters`);
+  return res.data;
+}
+
+export async function deleteCharacter(characterId: string): Promise<void> {
+  await http.delete(`/characters/${characterId}`);
 }
 
 // ── Clips ─────────────────────────────────────────────────────────────────────
@@ -103,4 +138,8 @@ export async function triggerExport(projectId: string): Promise<{ export_id: str
 export async function getExportStatus(exportId: string): Promise<ExportStatus> {
   const res = await http.get<ExportStatus>(`/export/${exportId}/status`);
   return res.data;
+}
+
+export function getExportDownloadUrl(exportId: string): string {
+  return `${BASE}/export/${exportId}/download`;
 }

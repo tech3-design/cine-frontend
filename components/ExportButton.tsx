@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
-import { triggerExport, getExportStatus } from "@/lib/api";
+import { triggerExport, getExportStatus, getExportDownloadUrl } from "@/lib/api";
 import { toast } from "sonner";
 import type { ExportStatus } from "@/lib/types";
 
@@ -59,14 +59,13 @@ export function ExportButton({ projectId, readyClipCount }: ExportButtonProps) {
 
   return (
     <div className="flex items-center gap-3">
-      {exportStatus?.status === "done" && exportStatus.video_url && (
+      {exportStatus?.status === "done" && exportId && (
         <a
-          href={exportStatus.video_url}
-          target="_blank"
-          rel="noopener noreferrer"
+          href={getExportDownloadUrl(exportId)}
+          download
           className="flex items-center gap-1.5 text-sm text-emerald-400 hover:text-emerald-300"
         >
-          <Download size={14} /> Download final video
+          <Download size={14} /> Download Video
         </a>
       )}
 

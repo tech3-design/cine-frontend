@@ -8,6 +8,7 @@ export interface Project {
   prompt: string;
   duration: number;
   global_memory: Record<string, unknown>;
+  script_raw: string | null;
   status: ProjectStatus;
   created_at: string;
   updated_at: string;
@@ -20,6 +21,8 @@ export interface Clip {
   scene_description: string;
   camera_note: string;
   audio_cues: string;
+  character_handles: string[];
+  dialogue: string;
   prompt_sent: string | null;
   video_url: string | null;
   thumbnail_url: string | null;
@@ -36,6 +39,16 @@ export interface ExportStatus {
   progress: number;
   video_url: string | null;
   error: string | null;
+}
+
+export interface Character {
+  id: string;
+  project_id: string;
+  name: string;
+  handle: string;
+  description: string;
+  reference_image_urls: string[];
+  created_at: string;
 }
 
 export interface WsMessage {
